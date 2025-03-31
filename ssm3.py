@@ -23,8 +23,12 @@ if missing_modules:
 import wmi
 import psutil
 
-# Define paths
-LIBRARY_PATH = "E:\\vscode\\simple-system-monitor\\library"
+# Define paths - Use AppData on Windows, or ~/.local on Linux/Mac
+if os.name == 'nt':  # Windows
+    LIBRARY_PATH = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'SimpleSystemMonitor')
+else:  # Linux/Mac
+    LIBRARY_PATH = os.path.join(os.path.expanduser('~'), '.local', 'share', 'SimpleSystemMonitor')
+
 OHM_ZIP_URL = "https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip"
 NODEMCU_IP = "192.168.0.190"  # Static IP of NodeMCU
 
@@ -40,6 +44,17 @@ def log(message, type="INFO"):
     }.get(type, "ℹ️")
     
     print(f"{prefix} {message}")
+
+def is_ohm_running():
+    """Check if OpenHardwareMonitor is already running."""
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            process_name = proc.info['name'].lower()
+            if 'openhardwaremonitor' in process_name:
+                return True
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
+            pass
+    return False
 
 def check_ohm_remote_server():
     """Check if OHM Remote Server is enabled."""
@@ -127,11 +142,17 @@ def find_extracted_folder():
 
 
 def run_ohm():
-    """Finds and runs OpenHardwareMonitor.exe."""
+    """Finds and runs OpenHardwareMonitor.exe if not already running."""
+    # First, check if OHM is already running
+    if is_ohm_running():
+        log("OpenHardwareMonitor is already running!", "SUCCESS")
+        return True
+        
+    # If not running, launch it
     ohm_folder = find_extracted_folder()
     if not ohm_folder:
         log("OpenHardwareMonitor folder not found!", "ERROR")
-        return
+        return False
 
     ohm_exe = os.path.join(ohm_folder, "OpenHardwareMonitor.exe")
 
@@ -140,10 +161,13 @@ def run_ohm():
         try:
             os.startfile(ohm_exe)
             time.sleep(2)  # Wait a bit for OHM to start
+            return True
         except Exception as e:
             log(f"Failed to launch OHM: {e}", "ERROR")
+            return False
     else:
         log("OpenHardwareMonitor.exe not found!", "ERROR")
+        return False
 
 
 def get_temperatures_from_json():
@@ -395,18 +419,40 @@ def get_gpu_usage():
 
 
 def get_system_metrics():
-    """Collect the specific required system metrics."""
+    """Collect the specific required system metrics without using psutil."""
     metrics = {}
     
     try:
-        # CPU usage
-        metrics['cpu_usage'] = round(psutil.cpu_percent(interval=0.5), 1)
+        # Get CPU and RAM usage using WMI on Windows or command line tools on other platforms
+        if os.name == 'nt':  # Windows
+            # Use WMI for Windows
+            try:
+                w = wmi.WMI()
+                
+                # CPU Usage - Windows
+                cpu_load = w.Win32_Processor()[0].LoadPercentage
+                metrics['cpu_usage'] = round(float(cpu_load), 1) if cpu_load is not None else 0
+                
+                # RAM Usage - Windows
+                computer = w.Win32_ComputerSystem()[0]
+                total_ram = float(computer.TotalPhysicalMemory)
+                
+                os_info = w.Win32_OperatingSystem()[0]
+                free_ram = float(os_info.FreePhysicalMemory) * 1024  # Convert from KB to bytes
+                
+                used_ram_percent = (total_ram - free_ram) / total_ram * 100
+                metrics['ram_usage'] = round(used_ram_percent, 1)
+                
+                log(f"Got metrics via WMI: CPU {metrics['cpu_usage']}%, RAM {metrics['ram_usage']}%", "DEBUG")
+            except Exception as e:
+                log(f"Error getting metrics via WMI: {e}", "ERROR")
+                # Fall back to command line in case of WMI failure
+                metrics = get_metrics_via_command_line()
+        else:
+            # Use command line for Linux/Mac
+            metrics = get_metrics_via_command_line()
         
-        # Memory usage
-        memory = psutil.virtual_memory()
-        metrics['ram_usage'] = round(memory.percent, 1)
-        
-        # GPU usage
+        # GPU usage - Keep existing implementation
         metrics['gpu_usage'] = round(get_gpu_usage(), 1)
     except Exception as e:
         log(f"Error getting system metrics: {e}", "ERROR")
@@ -420,6 +466,78 @@ def get_system_metrics():
     log(f"  • ram_usage: {metrics['ram_usage']}%", "METRIC")
     log(f"  • gpu_usage: {metrics['gpu_usage']}%", "METRIC")
     
+    return metrics
+
+
+def get_metrics_via_command_line():
+    """Get CPU and RAM metrics via command line tools."""
+    metrics = {'cpu_usage': 0, 'ram_usage': 0}
+    import subprocess
+    
+    try:
+        if os.name == 'nt':  # Windows
+            # CPU usage via typeperf (Windows command line)
+            cpu_cmd = "typeperf -sc 1 \"\\Processor(_Total)\\% Processor Time\""
+            cpu_result = subprocess.run(cpu_cmd, shell=True, capture_output=True, text=True)
+            if cpu_result.returncode == 0:
+                # Parse the output: "timestamp","value"
+                lines = cpu_result.stdout.strip().split('\n')
+                if len(lines) >= 2:
+                    value_line = lines[1].strip('"').split('","')
+                    if len(value_line) >= 2:
+                        metrics['cpu_usage'] = round(float(value_line[1]), 1)
+            
+            # RAM usage via wmic (Windows command line)
+            memory_cmd = "wmic OS get FreePhysicalMemory,TotalVisibleMemorySize /Value"
+            memory_result = subprocess.run(memory_cmd, shell=True, capture_output=True, text=True)
+            if memory_result.returncode == 0:
+                output = memory_result.stdout.strip()
+                free_mem = None
+                total_mem = None
+                
+                for line in output.split('\n'):
+                    if "=" in line:
+                        key, value = line.split('=', 1)
+                        if "FreePhysicalMemory" in key:
+                            free_mem = float(value)
+                        elif "TotalVisibleMemorySize" in key:
+                            total_mem = float(value)
+                
+                if free_mem is not None and total_mem is not None and total_mem > 0:
+                    used_percent = (total_mem - free_mem) / total_mem * 100
+                    metrics['ram_usage'] = round(used_percent, 1)
+        else:  # Linux/Mac
+            # CPU usage via top or mpstat
+            try:
+                # Try mpstat first
+                cpu_cmd = "mpstat 1 1 | grep -A 5 '%idle' | tail -n 1 | awk '{print 100 - $NF}'"
+                cpu_result = subprocess.run(cpu_cmd, shell=True, capture_output=True, text=True)
+                if cpu_result.returncode == 0 and cpu_result.stdout.strip():
+                    metrics['cpu_usage'] = round(float(cpu_result.stdout.strip()), 1)
+                else:
+                    # Fall back to top
+                    cpu_cmd = "top -bn1 | grep 'Cpu(s)' | sed 's/.*, *\\([0-9.]*\\)%* id.*/\\1/' | awk '{print 100 - $1}'"
+                    cpu_result = subprocess.run(cpu_cmd, shell=True, capture_output=True, text=True)
+                    if cpu_result.returncode == 0 and cpu_result.stdout.strip():
+                        metrics['cpu_usage'] = round(float(cpu_result.stdout.strip()), 1)
+            except Exception:
+                metrics['cpu_usage'] = 0
+            
+            # RAM usage via free
+            try:
+                mem_cmd = "free | grep Mem | awk '{print $3/$2 * 100.0}'"
+                mem_result = subprocess.run(mem_cmd, shell=True, capture_output=True, text=True)
+                if mem_result.returncode == 0 and mem_result.stdout.strip():
+                    metrics['ram_usage'] = round(float(mem_result.stdout.strip()), 1)
+            except Exception:
+                metrics['ram_usage'] = 0
+    
+    except Exception as e:
+        log(f"Error getting metrics via command line: {e}", "ERROR")
+        metrics['cpu_usage'] = 10  # Default values
+        metrics['ram_usage'] = 20
+    
+    log(f"Got metrics via command line: CPU {metrics['cpu_usage']}%, RAM {metrics['ram_usage']}%", "DEBUG")
     return metrics
 
 
@@ -493,13 +611,14 @@ def main():
     """Main execution function."""
     print_banner()
     log("Starting System Monitor")
+    log(f"Using library path: {LIBRARY_PATH}")
     
     # Step 1: Download and extract OpenHardwareMonitor if needed
     zip_path = download_ohm()
     if zip_path:
         extract_ohm(zip_path)
         
-        # Step 2: Run OpenHardwareMonitor
+        # Step 2: Run OpenHardwareMonitor if not already running
         run_ohm()
         
         # Give OHM extra time to fully start up
