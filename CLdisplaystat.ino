@@ -14,8 +14,8 @@ const char* ssid = "PEACE 2GHz";
 const char* password = "7660011887";
 
 // Telegram Bot settings
-#define BOT_TOKEN "7805830591:AAFfNv_3lODB4bfImEvIJiQEipDEfkp34mg"  // Replace with your bot token
-#define CHAT_ID "1158723052"               // Replace with your chat ID
+#define BOT_TOKEN "YOUR_TELEGRAM_BOT_TOKEN"  // Replace with your bot token
+#define CHAT_ID "YOUR_CHAT_ID"               // Replace with your chat ID
 
 // Set static IP configuration
 IPAddress staticIP(192, 168, 0, 190);  // Static IP for NodeMCU
