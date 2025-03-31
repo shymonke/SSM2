@@ -32,6 +32,13 @@ else:  # Linux/Mac
 OHM_ZIP_URL = "https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip"
 NODEMCU_IP = "192.168.0.190"  # Static IP of NodeMCU
 
+# Add tracking sets for discovered hardware and detected sensors
+discovered_hardware = set()
+detected_sensors = set()
+
+# Verbosity level: 0 = minimal, 1 = normal, 2 = verbose
+verbosity = 1
+
 # Configure logging format
 def log(message, type="INFO"):
     prefix = {
@@ -44,6 +51,25 @@ def log(message, type="INFO"):
     }.get(type, "ℹ️")
     
     print(f"{prefix} {message}")
+
+def log_once(message, type="DEBUG", identifier=None):
+    """Log a message only once for a given identifier."""
+    if identifier is None:
+        identifier = message  # Use the message itself as the identifier
+    
+    # For hardware discovery, use the discovered_hardware set
+    if type == "DEBUG" and "hardware" in message.lower():
+        if identifier not in discovered_hardware:
+            discovered_hardware.add(identifier)
+            log(message, type)
+    # For sensor readings, use the detected_sensors set
+    elif type == "DEBUG" and any(keyword in message.lower() for keyword in ["sensor", "temperature", "found"]):
+        if identifier not in detected_sensors:
+            detected_sensors.add(identifier)
+            log(message, type)
+    # For all other messages, always log
+    else:
+        log(message, type)
 
 def is_ohm_running():
     """Check if OpenHardwareMonitor is already running."""
@@ -199,12 +225,14 @@ def get_temperatures_from_json():
             # Identify CPU hardware
             if any(term in node_text for term in ['CPU', 'Processor', 'Ryzen', 'Intel', 'Core i', 'Pentium', 'Celeron', 'AMD']):
                 if not any(term in node_text for term in ['Graphics', 'GPU']):  # Make sure it's not a CPU graphics chip
-                    log(f"Found CPU hardware: {current_path}", "DEBUG")
+                    log_once(f"Found CPU hardware: {current_path}", 
+                           "DEBUG", f"cpu_hw_{current_path}")
                     cpu_nodes.append((node, current_path))
             
             # Identify GPU hardware
             if any(term in node_text for term in ['GPU', 'Graphics', 'NVIDIA', 'AMD', 'Radeon', 'GeForce']):
-                log(f"Found GPU hardware: {current_path}", "DEBUG")
+                log_once(f"Found GPU hardware: {current_path}", 
+                       "DEBUG", f"gpu_hw_{current_path}")
                 gpu_nodes.append((node, current_path))
             
             # Process children recursively
@@ -235,7 +263,8 @@ def get_temperatures_from_json():
                                     if is_package:
                                         try:
                                             temp_value = float(temp_node['Value'].split()[0])
-                                            log(f"Found {temp_type} temperature: {temp_value}°C from {path}/{temp_text}", "SUCCESS")
+                                            log_once(f"Found {temp_type} temperature: {temp_value}°C from {path}/{temp_text}", 
+                                                   "SUCCESS", f"{temp_type.lower()}_temp_{path}_{temp_text}")
                                             return temp_value
                                         except Exception as e:
                                             log(f"Error parsing temperature value: {e}", "ERROR")
@@ -246,7 +275,8 @@ def get_temperatures_from_json():
                                     if is_core:
                                         try:
                                             temp_value = float(temp_node['Value'].split()[0])
-                                            log(f"Found {temp_type} temperature: {temp_value}°C from {path}/{temp_text}", "SUCCESS")
+                                            log_once(f"Found {temp_type} temperature: {temp_value}°C from {path}/{temp_text}", 
+                                                   "SUCCESS", f"{temp_type.lower()}_temp_{path}_{temp_text}")
                                             return temp_value
                                         except Exception as e:
                                             log(f"Error parsing temperature value: {e}", "ERROR")
@@ -260,7 +290,7 @@ def get_temperatures_from_json():
         
         # If still not found, try a generic scan for temperature nodes
         if cpu_temp is None or gpu_temp is None:
-            log("Falling back to generic temperature scan", "DEBUG")
+            log_once("Falling back to generic temperature scan", "DEBUG", "generic_temp_scan")
             
             temp_nodes = []
             
@@ -275,7 +305,8 @@ def get_temperatures_from_json():
                         temp_value = float(node['Value'].split()[0])  # Extract numeric part
                         current_path = f"{parent_path}/{node['Text']}" if parent_path else node['Text']
                         temp_nodes.append((node, current_path, temp_value))
-                        log(f"Found temperature node: {current_path} = {temp_value}°C", "DEBUG")
+                        log_once(f"Found temperature node: {current_path} = {temp_value}°C", 
+                               "DEBUG", f"temp_node_{current_path}")
                     except Exception:
                         pass
                 
@@ -285,7 +316,8 @@ def get_temperatures_from_json():
                         temp_value = float(node['Value'].split()[0])  # Extract numeric part
                         current_path = f"{parent_path}/{node['Text']}" if parent_path else node['Text']
                         temp_nodes.append((node, current_path, temp_value))
-                        log(f"Found temperature node: {current_path} = {temp_value}°C", "DEBUG")
+                        log_once(f"Found temperature node: {current_path} = {temp_value}°C", 
+                               "DEBUG", f"temp_node_{current_path}")
                     except Exception:
                         pass
                         
@@ -318,7 +350,8 @@ def get_temperatures_from_json():
                         is_important = any(term in node_text for term in ['Package', 'Total', 'Tctl', 'Tdie'])
                         if is_important or cpu_temp is None:
                             cpu_temp = value
-                            log(f"Using CPU temperature from {path}: {value}°C", "SUCCESS")
+                            log_once(f"Using CPU temperature from {path}: {value}°C", 
+                                   "SUCCESS", f"cpu_temp_fallback_{path}")
                 
                 # Try to identify GPU temps if not found yet
                 if gpu_temp is None:
@@ -333,7 +366,8 @@ def get_temperatures_from_json():
                         is_important = any(term in node_text for term in ['Core', 'Die', 'GPU Temperature', 'Hot'])
                         if is_important or gpu_temp is None:
                             gpu_temp = value
-                            log(f"Using GPU temperature from {path}: {value}°C", "SUCCESS")
+                            log_once(f"Using GPU temperature from {path}: {value}°C", 
+                                   "SUCCESS", f"gpu_temp_fallback_{path}")
         
         # Report results
         if cpu_temp is not None:
@@ -363,27 +397,54 @@ def get_gpu_usage():
         data = r.json()
         gpu_load = None
         
-        def find_gpu_load(node):
+        def find_gpu_load(node, path=""):
             nonlocal gpu_load
-            if 'Children' in node:
-                for child in node['Children']:
-                    find_gpu_load(child)
             
-            # Look for GPU or Graphics Load nodes
+            current_path = path + "/" + node.get('Text', '') if path else node.get('Text', '')
+            
+            if 'Children' in node and isinstance(node['Children'], list):
+                # Look for Load section directly under a GPU node
+                if any(keyword in current_path.lower() for keyword in ['gpu', 'graphics']):
+                    for child in node['Children']:
+                        if child.get('Text') == 'Load':
+                            # Look for GPU Core/GPU load nodes under Load
+                            for load_child in child.get('Children', []):
+                                if 'Value' in load_child and ('GPU' in load_child.get('Text', '') or 'Core' in load_child.get('Text', '')):
+                                    try:
+                                        value_str = load_child['Value']
+                                        if '%' in value_str:
+                                            value = float(value_str.split()[0])
+                                            gpu_load = value
+                                            log_once(f"Found GPU Load node: {current_path}/Load/{load_child['Text']} = {value}%", 
+                                                   "DEBUG", f"gpu_load_{current_path}")
+                                            return True
+                                    except Exception as e:
+                                        log(f"Error parsing GPU load value: {e}", "DEBUG")
+                
+                # Continue searching in other children
+                for child in node['Children']:
+                    if find_gpu_load(child, current_path):
+                        return True
+            
+            # Look for any load-related node
             if 'Text' in node and 'Value' in node:
                 node_text = node['Text'].lower()
                 if ('load' in node_text and ('gpu' in node_text or 'graphics' in node_text)):
-                    # Also accept GPU Core, GPU Memory, etc. usages
                     try:
                         value_str = node['Value']
-                        value = float(value_str.split()[0])  # Remove " %" from the end
-                        gpu_load = value
-                        log(f"Found GPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
-                    except Exception as e:
-                        log(f"Error parsing GPU load value: {e}", "DEBUG")
+                        if '%' in value_str:
+                            value = float(value_str.split()[0])
+                            gpu_load = value
+                            log_once(f"Found GPU Load: {value}% from {current_path}", 
+                                   "DEBUG", f"gpu_load_alt_{current_path}")
+                            return True
+                    except Exception:
                         pass
+            
+            return False
         
-        for hw in data['Children']:
+        # Search for GPU load in all hardware nodes
+        for hw in data.get('Children', []):
             find_gpu_load(hw)
         
         if gpu_load is not None:
@@ -425,44 +486,84 @@ def get_gpu_usage():
 
 
 def get_cpu_usage_from_ohm():
-    """Get CPU usage from OpenHardwareMonitor first."""
+    """Get CPU usage from OpenHardwareMonitor, specifically targeting CPU Total load."""
     try:
         r = requests.get("http://localhost:8085/data.json", timeout=5)
         data = r.json()
         cpu_load = None
         
-        def find_cpu_load(node):
+        def find_cpu_load_node(node, path=""):
+            """Recursively search for CPU Total load node with exact path matching."""
             nonlocal cpu_load
-            if 'Children' in node:
-                for child in node['Children']:
-                    find_cpu_load(child)
             
-            # Look for CPU Load nodes
-            if 'Text' in node and 'Value' in node:
-                node_text = node['Text'].lower()
-                if 'load' in node_text and ('cpu' in node_text or 'processor' in node_text):
-                    # Prefer total/package CPU load over individual cores
-                    if 'total' in node_text or 'package' in node_text or node_text == 'cpu':
-                        try:
-                            value_str = node['Value']
-                            value = float(value_str.split()[0])  # Remove " %" from the end
-                            cpu_load = value
-                            log(f"Found CPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
-                            return
-                        except Exception as e:
-                            log(f"Error parsing CPU load value: {e}", "DEBUG")
-                    # If not a total load but some CPU load, keep it as a fallback
-                    elif cpu_load is None:
-                        try:
-                            value_str = node['Value']
-                            value = float(value_str.split()[0])
-                            cpu_load = value
-                            log(f"Found fallback CPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
-                        except Exception:
-                            pass
+            current_path = path + "/" + node.get('Text', '') if path else node.get('Text', '')
+            
+            # Check if this is a CPU node
+            if 'Children' in node and isinstance(node['Children'], list):
+                # Look for Load section under CPU
+                for child in node['Children']:
+                    if child.get('Text') == 'Load':
+                        # Look for CPU Total under Load
+                        for load_child in child.get('Children', []):
+                            if load_child.get('Text') == 'CPU Total' and 'Value' in load_child:
+                                try:
+                                    value_str = load_child['Value']
+                                    value = float(value_str.split()[0])  # Remove " %" from the end
+                                    cpu_load = value
+                                    log_once(f"Found CPU Total Load node: {current_path}/Load/CPU Total = {value}%", 
+                                           "DEBUG", f"cpu_total_load_{current_path}")
+                                    return True
+                                except Exception as e:
+                                    log(f"Error parsing CPU Total load value: {e}", "DEBUG")
+                        
+                # Continue searching in other children
+                for child in node['Children']:
+                    if find_cpu_load_node(child, current_path):
+                        return True
+            
+            return False
         
-        for hw in data['Children']:
-            find_cpu_load(hw)
+        # Search for CPU Total load node in all hardware nodes
+        for hw in data.get('Children', []):
+            find_cpu_load_node(hw)
+        
+        # If the specific path wasn't found, fall back to the previous method
+        if cpu_load is None:
+            def find_any_cpu_load(node):
+                nonlocal cpu_load
+                if 'Children' in node and isinstance(node['Children'], list):
+                    for child in node['Children']:
+                        find_any_cpu_load(child)
+                
+                # Look for any CPU Load nodes
+                if 'Text' in node and 'Value' in node:
+                    node_text = node['Text'].lower()
+                    if 'load' in node_text and ('cpu' in node_text or 'processor' in node_text):
+                        # Prefer total/package CPU load over individual cores
+                        if 'total' in node_text or 'package' in node_text or node_text == 'cpu':
+                            try:
+                                value_str = node['Value']
+                                value = float(value_str.split()[0])  # Remove " %" from the end
+                                cpu_load = value
+                                log_once(f"Found CPU Load: {value}% from {node['Text']}", 
+                                       "DEBUG", f"cpu_load_{node['Text']}")
+                                return
+                            except Exception as e:
+                                log(f"Error parsing CPU load value: {e}", "DEBUG")
+                        # If not a total load but some CPU load, keep it as a fallback
+                        elif cpu_load is None:
+                            try:
+                                value_str = node['Value']
+                                value = float(value_str.split()[0])
+                                cpu_load = value
+                                log_once(f"Found fallback CPU Load: {value}% from {node['Text']}", 
+                                       "DEBUG", f"cpu_load_fallback_{node['Text']}")
+                            except Exception:
+                                pass
+            
+            # Try the fallback method
+            for hw in data.get('Children', []):
+                find_any_cpu_load(hw)
         
         if cpu_load is not None:
             log(f"Using CPU usage from OHM: {cpu_load}%", "SUCCESS")
@@ -474,33 +575,81 @@ def get_cpu_usage_from_ohm():
 
 
 def get_ram_usage_from_ohm():
-    """Get RAM usage from OpenHardwareMonitor first."""
+    """Get RAM usage from OpenHardwareMonitor, specifically targeting Generic Memory - Load - Memory."""
     try:
         r = requests.get("http://localhost:8085/data.json", timeout=5)
         data = r.json()
         ram_usage = None
         
-        def find_ram_usage(node):
+        def find_ram_load_node(node, path=""):
+            """Recursively search for Generic Memory - Load - Memory node with exact path matching."""
             nonlocal ram_usage
-            if 'Children' in node:
-                for child in node['Children']:
-                    find_ram_usage(child)
             
-            # Look for Memory Load nodes
-            if 'Text' in node and 'Value' in node:
-                node_text = node['Text'].lower()
-                if ('load' in node_text or 'used' in node_text) and ('memory' in node_text or 'ram' in node_text):
-                    try:
-                        value_str = node['Value']
-                        value = float(value_str.split()[0])  # Remove " %" or " GB" from the end
-                        ram_usage = value
-                        log(f"Found RAM Usage from OHM: {value}% from {node['Text']}", "DEBUG")
-                        return
-                    except Exception as e:
-                        log(f"Error parsing RAM usage value: {e}", "DEBUG")
+            current_path = path + "/" + node.get('Text', '') if path else node.get('Text', '')
+            
+            # Check if this is a Generic Memory node
+            if node.get('Text') == 'Generic Memory' and 'Children' in node:
+                # Look for Load section under Generic Memory
+                for child in node.get('Children', []):
+                    if child.get('Text') == 'Load':
+                        # Look for Memory under Load
+                        for load_child in child.get('Children', []):
+                            if load_child.get('Text') == 'Memory' and 'Value' in load_child:
+                                try:
+                                    value_str = load_child['Value']
+                                    # Make sure value is in percentage (ends with %)
+                                    if '%' in value_str:
+                                        value = float(value_str.split()[0])  # Remove " %" from the end
+                                        ram_usage = value
+                                        log_once(f"Found Memory Load node: {current_path}/Load/Memory = {value}%", 
+                                               "DEBUG", f"memory_load_{current_path}")
+                                        return True
+                                except Exception as e:
+                                    log(f"Error parsing Memory load value: {e}", "DEBUG")
+                        
+                # Continue searching in other children
+                for child in node.get('Children', []):
+                    if find_ram_load_node(child, current_path):
+                        return True
+            elif 'Children' in node and isinstance(node['Children'], list):
+                # Continue searching in all children
+                for child in node['Children']:
+                    if find_ram_load_node(child, current_path):
+                        return True
+            
+            return False
         
-        for hw in data['Children']:
-            find_ram_usage(hw)
+        # Search for Memory load node in all hardware nodes
+        for hw in data.get('Children', []):
+            find_ram_load_node(hw)
+        
+        # If the specific path wasn't found, fall back to the previous method
+        if ram_usage is None:
+            def find_any_ram_load(node):
+                nonlocal ram_usage
+                if 'Children' in node and isinstance(node['Children'], list):
+                    for child in node['Children']:
+                        find_any_ram_load(child)
+                
+                # Look for any Memory Load nodes
+                if 'Text' in node and 'Value' in node:
+                    node_text = node['Text'].lower()
+                    if ('load' in node_text or 'used' in node_text) and ('memory' in node_text or 'ram' in node_text):
+                        # Make sure the value is a percentage (ends with %)
+                        value_str = node['Value']
+                        if '%' in value_str:
+                            try:
+                                value = float(value_str.split()[0])  # Remove " %" from the end
+                                ram_usage = value
+                                log_once(f"Found RAM Usage: {value}% from {node['Text']}", 
+                                       "DEBUG", f"ram_usage_{node['Text']}")
+                                return
+                            except Exception as e:
+                                log(f"Error parsing RAM usage value: {e}", "DEBUG")
+            
+            # Try the fallback method
+            for hw in data.get('Children', []):
+                find_any_ram_load(hw)
         
         if ram_usage is not None:
             log(f"Using RAM usage from OHM: {ram_usage}%", "SUCCESS")
@@ -520,6 +669,9 @@ def get_system_metrics():
         cpu_usage = get_cpu_usage_from_ohm()
         ram_usage = get_ram_usage_from_ohm()
         
+        log(f"OHM metrics found - CPU: {cpu_usage is not None}, RAM: {ram_usage is not None}", "DEBUG")
+        
+        # Add CPU usage from OHM if available
         if cpu_usage is not None:
             metrics['cpu_usage'] = round(cpu_usage, 1)
         else:
@@ -567,6 +719,7 @@ def get_system_metrics():
         # Add RAM usage from OHM if we got it
         if ram_usage is not None:
             metrics['ram_usage'] = round(ram_usage, 1)
+            log(f"Using RAM usage from OHM: {metrics['ram_usage']}%", "SUCCESS")
         
         # GPU usage - Keep existing implementation which already prioritizes OHM
         metrics['gpu_usage'] = round(get_gpu_usage(), 1)
