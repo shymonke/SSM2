@@ -25,9 +25,9 @@ import psutil
 
 # Define paths - Use AppData on Windows, or ~/.local on Linux/Mac
 if os.name == 'nt':  # Windows
-    LIBRARY_PATH = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'SimpleSystemMonitor')
+    LIBRARY_PATH = os.path.join(os.environ.get('LOCALAPPDATA', os.path.expanduser('~')), 'ITInfrastructureMonitor')
 else:  # Linux/Mac
-    LIBRARY_PATH = os.path.join(os.path.expanduser('~'), '.local', 'share', 'SimpleSystemMonitor')
+    LIBRARY_PATH = os.path.join(os.path.expanduser('~'), '.local', 'share', 'ITInfrastructureMonitor')
 
 OHM_ZIP_URL = "https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip"
 NODEMCU_IP = "192.168.0.190"  # Static IP of NodeMCU
@@ -730,7 +730,7 @@ def get_system_metrics():
         metrics['ram_usage'] = 20
         metrics['gpu_usage'] = 5
     
-    log("System Metrics:", "METRIC")
+    log("IT Infrastructure Metrics:", "METRIC")
     log(f"  • cpu_usage: {metrics['cpu_usage']}%", "METRIC")
     log(f"  • ram_usage: {metrics['ram_usage']}%", "METRIC")
     log(f"  • gpu_usage: {metrics['gpu_usage']}%", "METRIC")
@@ -881,7 +881,7 @@ def print_banner():
     banner = """
     ╔════════════════════════════════════════════════╗
     ║                                                ║
-    ║      🖥️  SYSTEM HARDWARE MONITOR v2.0  🖥️       ║
+    ║      🖥️  IT INFRASTRUCTURE MONITORING v2.0  🖥️       ║
     ║                                                ║
     ╚════════════════════════════════════════════════╝
     """
@@ -893,7 +893,7 @@ def print_banner():
 def main():
     """Main execution function."""
     print_banner()
-    log("Starting System Monitor")
+    log("Starting IT Infrastructure Monitoring")
     log(f"Using library path: {LIBRARY_PATH}")
     
     # Step 1: Download and extract OpenHardwareMonitor if needed
@@ -914,7 +914,7 @@ def main():
             cpu_temp, gpu_temp = get_temperatures_from_json()
             send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp)
                 
-    log("System monitoring is active. Press Ctrl+C to exit.", "SUCCESS")
+    log("IT Infrastructure Monitoring is active. Press Ctrl+C to exit.", "SUCCESS")
     
     # Continuous monitoring loop
     try:

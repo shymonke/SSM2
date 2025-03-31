@@ -8,7 +8,7 @@ cursor
 
 
 to frontend 
-    -i like th ui 
+    -i like th ui
     -take4 info from pc properly
     -webpage
     -eep meory for dynamic variables for tele bot 

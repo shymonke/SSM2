@@ -14,8 +14,8 @@ const char* ssid = "PEACE 2GHz";
 const char* password = "7660011887";
 
 // Telegram Bot settings
-#define BOT_TOKEN "YOUR_TELEGRAM_BOT_TOKEN"  // Replace with your bot token
-#define CHAT_ID "YOUR_CHAT_ID"               // Replace with your chat ID
+#define BOT_TOKEN "7805830591:AAFfNv_3lODB4bfImEvIJiQEipDEfkp34mg"  // Replace with your bot token
+#define CHAT_ID "1158723052"               // Replace with your chat ID
 
 // Set static IP configuration
 IPAddress staticIP(192, 168, 0, 190);  // Static IP for NodeMCU
@@ -123,7 +123,7 @@ void setup() {
   
   // Send startup notification
   if (settings.notifications_enabled) {
-    sendTelegramNotification("System Monitor started. Ready to monitor your system!");
+    sendTelegramNotification("IT Infrastructure Monitoring System started. Ready to monitor your system!");
   }
   
   // Show IP on display
@@ -150,7 +150,7 @@ void handleRoot() {
     "<head>"
     "<meta name='viewport' content='width=device-width, initial-scale=1.0'>"
     "<meta charset='UTF-8'>"
-    "<title>System Monitor</title>"
+    "<title>IT Infrastructure Monitoring System</title>"
     "<style>"
     "body { font-family: Arial, sans-serif; margin: 0; padding: 20px; background-color: #f5f5f5; }"
     ".container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }"
@@ -183,7 +183,7 @@ void handleRoot() {
     "</head>"
     "<body>"
     "<div class='container'>"
-    "<h1>System Monitor</h1>"
+    "<h1>IT Infrastructure Monitoring System</h1>"
     "<div class='metrics' id='metrics'>"
     "<div class='metric'><h3>CPU Temperature</h3><p id='cpu_temp'>Loading...</p></div>"
     "<div class='metric'><h3>CPU Usage</h3><p id='cpu_usage'>Loading...</p></div>"
@@ -531,7 +531,7 @@ void drawBackground() {
   tft.setTextSize(1);
   tft.setTextColor(ST77XX_WHITE);
   tft.setCursor(5, 5);
-  tft.println("System Metrics Monitor");
+  tft.println("IT Infrastructure Monitor");
   
   // Draw separator line
   tft.drawFastHLine(0, 15, tft.width(), ST77XX_WHITE);
@@ -545,8 +545,8 @@ void showStartupScreen() {
   // Display centered title
   int16_t x1, y1;
   uint16_t w, h;
-  const char* title = "System";
-  const char* title2 = "Monitor";
+  const char* title = "IT Infrastructure";
+  const char* title2 = "Monitoring";
   
   tft.getTextBounds(title, 0, 0, &x1, &y1, &w, &h);
   tft.setCursor((tft.width() - w) / 2, tft.height()/2 - h);
