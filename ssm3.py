@@ -881,7 +881,7 @@ def print_banner():
     banner = """
     ╔════════════════════════════════════════════════╗
     ║                                                ║
-    ║      🖥️  IT INFRASTRUCTURE MONITORING v2.0  🖥️       ║
+    ║    🖥️  IT INFRASTRUCTURE MONITORING v2.0  🖥️  ║
     ║                                                ║
     ╚════════════════════════════════════════════════╝
     """
