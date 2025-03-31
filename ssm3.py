@@ -847,19 +847,33 @@ def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
         
         log(f"Sending data to NodeMCU: {json_payload}")
         
-        r = requests.post(url, data=json_payload, headers=headers, timeout=5)
-        
-        if r.status_code == 200:
-            log("Filtered metrics sent to NodeMCU successfully!", "SUCCESS")
-        else:
-            log(f"Unexpected response from NodeMCU: {r.status_code}", "WARNING")
-            log(f"Response: {r.text}", "WARNING")
-    except requests.exceptions.Timeout:
-        log(f"Connection to NodeMCU timed out. Ensure it's powered on and connected to WiFi.", "ERROR")
-    except requests.exceptions.ConnectionError:
-        log(f"Failed to connect to NodeMCU at {NODEMCU_IP}. Check if IP is correct.", "ERROR")
+        try:
+            # Set a reasonable timeout to prevent hanging
+            r = requests.post(url, data=json_payload, headers=headers, timeout=5)
+            
+            if r.status_code == 200:
+                log("Filtered metrics sent to NodeMCU successfully!", "SUCCESS")
+            else:
+                log(f"Unexpected response from NodeMCU: HTTP {r.status_code}", "WARNING")
+                log(f"Response: {r.text}", "WARNING")
+                
+        except requests.exceptions.Timeout:
+            log(f"Connection to NodeMCU timed out. Ensure it's powered on and connected to WiFi at {NODEMCU_IP}.", "ERROR")
+            log("Check that the static IP configuration is correct.", "ERROR")
+            
+        except requests.exceptions.ConnectionError:
+            log(f"Failed to connect to NodeMCU at {NODEMCU_IP}.", "ERROR")
+            log("Possible causes:", "ERROR")
+            log("  • NodeMCU is not powered on", "ERROR")
+            log("  • NodeMCU is not connected to WiFi", "ERROR")
+            log("  • IP address is incorrect (current: {NODEMCU_IP})", "ERROR")
+            log("  • NodeMCU and PC are on different networks", "ERROR")
+            
+        except Exception as e:
+            log(f"Failed to send metrics to NodeMCU: {e}", "ERROR")
+            
     except Exception as e:
-        log(f"Failed to send metrics to NodeMCU: {e}", "ERROR")
+        log(f"Error preparing metrics for NodeMCU: {e}", "ERROR")
 
 
 def print_banner():
