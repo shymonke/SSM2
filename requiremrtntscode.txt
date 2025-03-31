@@ -1,0 +1,16 @@
+UV githaub (download)
+UV venv on the cd thing 
+uv pip install -r requirements.txt
+
+
+
+cursor 
+
+
+to frontend 
+    -i like th ui 
+    -take4 info from pc properly
+    -webpage
+    -eep meory for dynamic variables for tele bot 
+    -tele bot 
+    -hope it doesnt burn

@@ -356,9 +356,44 @@ def get_temperatures_from_json():
 
 
 def get_gpu_usage():
-    """Get GPU usage if possible using multiple methods."""
+    """Get GPU usage from OHM first, then try other methods if that fails."""
+    # First try to get GPU usage from OHM since it's likely more reliable
     try:
-        # Try to use NVIDIA SMI for NVIDIA GPUs
+        r = requests.get("http://localhost:8085/data.json", timeout=5)
+        data = r.json()
+        gpu_load = None
+        
+        def find_gpu_load(node):
+            nonlocal gpu_load
+            if 'Children' in node:
+                for child in node['Children']:
+                    find_gpu_load(child)
+            
+            # Look for GPU or Graphics Load nodes
+            if 'Text' in node and 'Value' in node:
+                node_text = node['Text'].lower()
+                if ('load' in node_text and ('gpu' in node_text or 'graphics' in node_text)):
+                    # Also accept GPU Core, GPU Memory, etc. usages
+                    try:
+                        value_str = node['Value']
+                        value = float(value_str.split()[0])  # Remove " %" from the end
+                        gpu_load = value
+                        log(f"Found GPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
+                    except Exception as e:
+                        log(f"Error parsing GPU load value: {e}", "DEBUG")
+                        pass
+        
+        for hw in data['Children']:
+            find_gpu_load(hw)
+        
+        if gpu_load is not None:
+            log(f"Using GPU usage from OHM: {gpu_load}%", "SUCCESS")
+            return gpu_load
+    except Exception as e:
+        log(f"Could not get GPU usage from OHM: {e}", "DEBUG")
+    
+    # Fall back to nvidia-smi for NVIDIA GPUs if OHM failed
+    try:
         import subprocess
         result = subprocess.run(
             ['nvidia-smi', '--query-gpu=utilization.gpu', '--format=csv,noheader,nounits'],
@@ -372,8 +407,8 @@ def get_gpu_usage():
     except Exception:
         pass
         
+    # Last resort: try WMI for Windows
     try:
-        # Fallback to WMI for Windows
         w = wmi.WMI(namespace="root\\CIMV2")
         gpu_info = w.Win32_PerfFormattedData_GPUPerformanceCounters_GPUEngine()
         if gpu_info:
@@ -383,39 +418,97 @@ def get_gpu_usage():
             return usage
     except Exception:
         pass
-            
-    # If all methods fail, try to get GPU usage from OHM
-    try:
-        r = requests.get("http://localhost:8085/data.json", timeout=5)
-        data = r.json()
-        gpu_load = None
-        
-        def find_gpu_load(node):
-            nonlocal gpu_load
-            if 'Children' in node:
-                for child in node['Children']:
-                    find_gpu_load(child)
-            
-            if 'Text' in node and 'Load' in node['Text'] and 'Value' in node and ('GPU' in node['Text'] or 'Graphics' in node['Text']):
-                try:
-                    value_str = node['Value']
-                    value = float(value_str.split()[0])  # Remove " %" from the end
-                    gpu_load = value
-                    log(f"Found GPU Load: {value}% from {node['Text']}", "DEBUG")
-                except Exception:
-                    pass
-        
-        for hw in data['Children']:
-            find_gpu_load(hw)
-        
-        if gpu_load is not None:
-            return gpu_load
-    except Exception:
-        pass
     
     # If everything fails, return a default value
     log("Could not determine GPU usage, using default value", "WARNING")
     return 25  # Return a reasonable default value instead of 0
+
+
+def get_cpu_usage_from_ohm():
+    """Get CPU usage from OpenHardwareMonitor first."""
+    try:
+        r = requests.get("http://localhost:8085/data.json", timeout=5)
+        data = r.json()
+        cpu_load = None
+        
+        def find_cpu_load(node):
+            nonlocal cpu_load
+            if 'Children' in node:
+                for child in node['Children']:
+                    find_cpu_load(child)
+            
+            # Look for CPU Load nodes
+            if 'Text' in node and 'Value' in node:
+                node_text = node['Text'].lower()
+                if 'load' in node_text and ('cpu' in node_text or 'processor' in node_text):
+                    # Prefer total/package CPU load over individual cores
+                    if 'total' in node_text or 'package' in node_text or node_text == 'cpu':
+                        try:
+                            value_str = node['Value']
+                            value = float(value_str.split()[0])  # Remove " %" from the end
+                            cpu_load = value
+                            log(f"Found CPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
+                            return
+                        except Exception as e:
+                            log(f"Error parsing CPU load value: {e}", "DEBUG")
+                    # If not a total load but some CPU load, keep it as a fallback
+                    elif cpu_load is None:
+                        try:
+                            value_str = node['Value']
+                            value = float(value_str.split()[0])
+                            cpu_load = value
+                            log(f"Found fallback CPU Load from OHM: {value}% from {node['Text']}", "DEBUG")
+                        except Exception:
+                            pass
+        
+        for hw in data['Children']:
+            find_cpu_load(hw)
+        
+        if cpu_load is not None:
+            log(f"Using CPU usage from OHM: {cpu_load}%", "SUCCESS")
+            return cpu_load
+    except Exception as e:
+        log(f"Could not get CPU usage from OHM: {e}", "DEBUG")
+    
+    return None
+
+
+def get_ram_usage_from_ohm():
+    """Get RAM usage from OpenHardwareMonitor first."""
+    try:
+        r = requests.get("http://localhost:8085/data.json", timeout=5)
+        data = r.json()
+        ram_usage = None
+        
+        def find_ram_usage(node):
+            nonlocal ram_usage
+            if 'Children' in node:
+                for child in node['Children']:
+                    find_ram_usage(child)
+            
+            # Look for Memory Load nodes
+            if 'Text' in node and 'Value' in node:
+                node_text = node['Text'].lower()
+                if ('load' in node_text or 'used' in node_text) and ('memory' in node_text or 'ram' in node_text):
+                    try:
+                        value_str = node['Value']
+                        value = float(value_str.split()[0])  # Remove " %" or " GB" from the end
+                        ram_usage = value
+                        log(f"Found RAM Usage from OHM: {value}% from {node['Text']}", "DEBUG")
+                        return
+                    except Exception as e:
+                        log(f"Error parsing RAM usage value: {e}", "DEBUG")
+        
+        for hw in data['Children']:
+            find_ram_usage(hw)
+        
+        if ram_usage is not None:
+            log(f"Using RAM usage from OHM: {ram_usage}%", "SUCCESS")
+            return ram_usage
+    except Exception as e:
+        log(f"Could not get RAM usage from OHM: {e}", "DEBUG")
+    
+    return None
 
 
 def get_system_metrics():
@@ -423,36 +516,59 @@ def get_system_metrics():
     metrics = {}
     
     try:
-        # Get CPU and RAM usage using WMI on Windows or command line tools on other platforms
-        if os.name == 'nt':  # Windows
-            # Use WMI for Windows
-            try:
-                w = wmi.WMI()
-                
-                # CPU Usage - Windows
-                cpu_load = w.Win32_Processor()[0].LoadPercentage
-                metrics['cpu_usage'] = round(float(cpu_load), 1) if cpu_load is not None else 0
-                
-                # RAM Usage - Windows
-                computer = w.Win32_ComputerSystem()[0]
-                total_ram = float(computer.TotalPhysicalMemory)
-                
-                os_info = w.Win32_OperatingSystem()[0]
-                free_ram = float(os_info.FreePhysicalMemory) * 1024  # Convert from KB to bytes
-                
-                used_ram_percent = (total_ram - free_ram) / total_ram * 100
-                metrics['ram_usage'] = round(used_ram_percent, 1)
-                
-                log(f"Got metrics via WMI: CPU {metrics['cpu_usage']}%, RAM {metrics['ram_usage']}%", "DEBUG")
-            except Exception as e:
-                log(f"Error getting metrics via WMI: {e}", "ERROR")
-                # Fall back to command line in case of WMI failure
-                metrics = get_metrics_via_command_line()
-        else:
-            # Use command line for Linux/Mac
-            metrics = get_metrics_via_command_line()
+        # First try to get CPU and RAM metrics from OHM
+        cpu_usage = get_cpu_usage_from_ohm()
+        ram_usage = get_ram_usage_from_ohm()
         
-        # GPU usage - Keep existing implementation
+        if cpu_usage is not None:
+            metrics['cpu_usage'] = round(cpu_usage, 1)
+        else:
+            # If OHM failed, fall back to WMI or command line
+            log("Falling back to alternative methods for CPU usage", "DEBUG")
+            
+            if os.name == 'nt':  # Windows
+                # Use WMI for Windows
+                try:
+                    w = wmi.WMI()
+                    
+                    # CPU Usage - Windows
+                    if 'cpu_usage' not in metrics:
+                        cpu_load = w.Win32_Processor()[0].LoadPercentage
+                        metrics['cpu_usage'] = round(float(cpu_load), 1) if cpu_load is not None else 0
+                    
+                    # RAM Usage - Windows
+                    if 'ram_usage' not in metrics and ram_usage is None:
+                        computer = w.Win32_ComputerSystem()[0]
+                        total_ram = float(computer.TotalPhysicalMemory)
+                        
+                        os_info = w.Win32_OperatingSystem()[0]
+                        free_ram = float(os_info.FreePhysicalMemory) * 1024  # Convert from KB to bytes
+                        
+                        used_ram_percent = (total_ram - free_ram) / total_ram * 100
+                        metrics['ram_usage'] = round(used_ram_percent, 1)
+                    
+                    log(f"Got metrics via WMI: CPU {metrics.get('cpu_usage')}%, RAM {metrics.get('ram_usage')}%", "DEBUG")
+                except Exception as e:
+                    log(f"Error getting metrics via WMI: {e}", "ERROR")
+                    # Fall back to command line in case of WMI failure
+                    cmd_metrics = get_metrics_via_command_line()
+                    if 'cpu_usage' not in metrics:
+                        metrics['cpu_usage'] = cmd_metrics['cpu_usage']
+                    if 'ram_usage' not in metrics and ram_usage is None:
+                        metrics['ram_usage'] = cmd_metrics['ram_usage']
+            else:
+                # Use command line for Linux/Mac
+                cmd_metrics = get_metrics_via_command_line()
+                if 'cpu_usage' not in metrics:
+                    metrics['cpu_usage'] = cmd_metrics['cpu_usage']
+                if 'ram_usage' not in metrics and ram_usage is None:
+                    metrics['ram_usage'] = cmd_metrics['ram_usage']
+        
+        # Add RAM usage from OHM if we got it
+        if ram_usage is not None:
+            metrics['ram_usage'] = round(ram_usage, 1)
+        
+        # GPU usage - Keep existing implementation which already prioritizes OHM
         metrics['gpu_usage'] = round(get_gpu_usage(), 1)
     except Exception as e:
         log(f"Error getting system metrics: {e}", "ERROR")
