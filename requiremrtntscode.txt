@@ -2,6 +2,14 @@ UV githaub (download)
 UV venv on the cd thing 
 uv pip install -r requirements.txt
 
+// Telegram Bot settings
+#define BOT_TOKEN "7805830591:AAFfNv_3lODB4bfImEvIJiQEipDEfkp34mg"  // Replace with your bot token
+#define CHAT_ID "1158723052"               // Replace with your chat ID
+
+
+
+1158723052
+7805830591:AAFfNv_3lODB4bfImEvIJiQEipDEfkp34mg
 
 
 cursor 

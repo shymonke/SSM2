@@ -5,11 +5,11 @@ import zipfile
 import time
 import json
 import socket
-import zeroconf
-from zeroconf import ServiceInfo, Zeroconf
+from threading import Thread
+from queue import Queue
 
 # --- Module Check Only ---
-required_modules = ["requests", "wmi", "psutil", "zeroconf"]
+required_modules = ["requests", "wmi", "psutil"]
 
 missing_modules = []
 for module in required_modules:
@@ -33,7 +33,6 @@ else:  # Linux/Mac
     LIBRARY_PATH = os.path.join(os.path.expanduser('~'), '.local', 'share', 'ITInfrastructureMonitor')
 
 OHM_ZIP_URL = "https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip"
-NODEMCU_SERVICE_NAME = "itinfrastructuremonitor._http._tcp.local."
 
 # Add tracking sets for discovered hardware and detected sensors
 discovered_hardware = set()
@@ -44,53 +43,91 @@ verbosity = 1
 
 # NodeMCU IP address (will be discovered)
 nodemcu_ip = None
+last_discovery_time = 0
+DISCOVERY_TIMEOUT = 300  # 5 minutes between full network scans
 
-class NodeMCUListener:
-    def __init__(self):
-        self.found = False
-        self.ip = None
-
-    def remove_service(self, zeroconf, type_, name):
+def check_port_80(ip, queue):
+    """Check if port 80 is open on the given IP."""
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.1)  # 100ms timeout
+        result = sock.connect_ex((ip, 80))
+        if result == 0:  # Port is open
+            try:
+                # Try to get the root page
+                response = requests.get(f"http://{ip}/", timeout=0.5)
+                # Check if it's our NodeMCU by looking for specific content
+                if "IT Infrastructure" in response.text:
+                    queue.put(ip)
+            except:
+                pass
+    except:
         pass
+    finally:
+        sock.close()
 
-    def add_service(self, zeroconf, type_, name):
-        if name == NODEMCU_SERVICE_NAME:
-            info = zeroconf.get_service_info(type_, name)
-            if info:
-                self.ip = socket.inet_ntoa(info.addresses[0])
-                self.found = True
-                log(f"Found NodeMCU at {self.ip}", "SUCCESS")
+def get_network_prefix():
+    """Get the network prefix for the local network."""
+    try:
+        # Get all network interfaces
+        for interface, addrs in psutil.net_if_addrs().items():
+            for addr in addrs:
+                # Look for IPv4 address
+                if addr.family == socket.AF_INET and not addr.address.startswith('127.'):
+                    # Extract network prefix (first three octets)
+                    return '.'.join(addr.address.split('.')[:3])
+    except:
+        return '192.168.1'  # Default fallback
+    return '192.168.1'  # Default fallback
 
 def discover_nodemcu():
-    """Discover NodeMCU using mDNS."""
-    global nodemcu_ip
+    """Discover NodeMCU using network scan."""
+    global nodemcu_ip, last_discovery_time
+    
+    # If we have a recent discovery and the IP is still responding, use it
+    if nodemcu_ip and time.time() - last_discovery_time < DISCOVERY_TIMEOUT:
+        try:
+            response = requests.get(f"http://{nodemcu_ip}/", timeout=1)
+            if response.status_code == 200:
+                return True
+        except:
+            pass
     
     log("Searching for NodeMCU on the network...")
-    zeroconf = Zeroconf()
-    listener = NodeMCUListener()
     
+    # Get the network prefix
+    net_prefix = get_network_prefix()
+    log(f"Scanning network: {net_prefix}.0/24")
+    
+    # Create a queue for results
+    result_queue = Queue()
+    threads = []
+    
+    # Scan all IPs in the subnet
+    for i in range(1, 255):
+        ip = f"{net_prefix}.{i}"
+        thread = Thread(target=check_port_80, args=(ip, result_queue))
+        thread.daemon = True
+        threads.append(thread)
+        thread.start()
+    
+    # Wait for all threads to complete
+    for thread in threads:
+        thread.join(timeout=0.1)
+    
+    # Check if we found the NodeMCU
     try:
-        browser = zeroconf.ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
-        # Wait for up to 10 seconds to find the NodeMCU
-        for _ in range(20):  # 20 * 0.5 seconds = 10 seconds
-            if listener.found:
-                nodemcu_ip = listener.ip
-                zeroconf.close()
-                return True
-            time.sleep(0.5)
-        
+        nodemcu_ip = result_queue.get_nowait()
+        last_discovery_time = time.time()
+        log(f"Found NodeMCU at {nodemcu_ip}", "SUCCESS")
+        return True
+    except:
         log("NodeMCU not found on the network", "ERROR")
         log("Please ensure:", "ERROR")
         log("  • NodeMCU is powered on", "ERROR")
         log("  • NodeMCU is connected to the same WiFi network", "ERROR")
         log("  • The WiFi credentials are correct", "ERROR")
         return False
-        
-    except Exception as e:
-        log(f"Error during NodeMCU discovery: {e}", "ERROR")
-        return False
-    finally:
-        zeroconf.close()
 
 def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
     """Send only the required filtered metrics to the NodeMCU."""
@@ -131,7 +168,7 @@ def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
         json_payload = json.dumps(filtered_metrics)
         
         # Send data to NodeMCU with increased timeout
-        url = f"http://{nodemcu_ip}/update"  # Using the correct endpoint (/update)
+        url = f"http://{nodemcu_ip}/update"
         headers = {'Content-Type': 'application/json'}
         
         log(f"Sending data to NodeMCU: {json_payload}")
@@ -146,14 +183,10 @@ def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
                 log(f"Unexpected response from NodeMCU: HTTP {r.status_code}", "WARNING")
                 log(f"Response: {r.text}", "WARNING")
                 
-        except requests.exceptions.Timeout:
-            log(f"Connection to NodeMCU timed out. Retrying discovery...", "ERROR")
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError):
+            log("Connection to NodeMCU failed. Retrying discovery...", "ERROR")
             nodemcu_ip = None  # Reset IP to trigger rediscovery
-            discover_nodemcu()
-            
-        except requests.exceptions.ConnectionError:
-            log(f"Failed to connect to NodeMCU. Retrying discovery...", "ERROR")
-            nodemcu_ip = None  # Reset IP to trigger rediscovery
+            last_discovery_time = 0  # Reset discovery time to force new scan
             discover_nodemcu()
             
         except Exception as e:
