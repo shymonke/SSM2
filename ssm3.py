@@ -7,6 +7,7 @@ import json
 import socket
 from threading import Thread
 from queue import Queue
+import argparse
 
 # --- Module Check Only ---
 required_modules = ["requests", "wmi", "psutil"]
@@ -46,6 +47,18 @@ nodemcu_ip = None
 last_discovery_time = 0
 DISCOVERY_TIMEOUT = 300  # 5 minutes between full network scans
 
+# Parse command line arguments
+def parse_args():
+    parser = argparse.ArgumentParser(description='IT Infrastructure Monitoring System')
+    parser.add_argument('--ip', help='Manually specify the NodeMCU IP address')
+    parser.add_argument('--subnet', help='Manually specify subnet to scan (e.g., 192.168.1)')
+    return parser.parse_args()
+
+args = parse_args()
+if args.ip:
+    nodemcu_ip = args.ip
+    log(f"Using manually specified NodeMCU IP: {nodemcu_ip}", "SUCCESS")
+
 def check_port_80(ip, queue):
     """Check if port 80 is open on the given IP."""
     try:
@@ -66,23 +79,69 @@ def check_port_80(ip, queue):
     finally:
         sock.close()
 
-def get_network_prefix():
-    """Get the network prefix for the local network."""
+def get_active_network_prefixes():
+    """Get all active network prefixes with mobile hotspot networks prioritized."""
+    network_prefixes = []
+    
+    # Common mobile hotspot and frequent prefixes to check first
+    priority_prefixes = ['192.168.137', '192.168.0', '192.168.1', '172.20.10', '10.0.0', '10.0.1']
+    
+    # Add manually specified subnet first if provided
+    if args.subnet:
+        network_prefixes.append(args.subnet)
+        
+    # Try to load last successful subnet from file
+    try:
+        subnet_file = os.path.join(LIBRARY_PATH, "last_subnet.txt")
+        if os.path.exists(subnet_file):
+            with open(subnet_file, "r") as f:
+                last_subnet = f.read().strip()
+            if last_subnet and last_subnet not in network_prefixes:
+                network_prefixes.append(last_subnet)
+                log(f"Using last successful subnet: {last_subnet}", "INFO")
+    except Exception as e:
+        log(f"Error loading last subnet: {e}", "DEBUG")
+    
+    # Add all active network interfaces
     try:
         # Get all network interfaces
         for interface, addrs in psutil.net_if_addrs().items():
             for addr in addrs:
                 # Look for IPv4 address
-                if addr.family == socket.AF_INET and not addr.address.startswith('127.'):
+                if addr.family == socket.AF_INET:
+                    ip = addr.address
+                    # Skip loopback
+                    if ip.startswith('127.'):
+                        continue
                     # Extract network prefix (first three octets)
-                    return '.'.join(addr.address.split('.')[:3])
-    except:
-        return '192.168.1'  # Default fallback
-    return '192.168.1'  # Default fallback
+                    prefix = '.'.join(ip.split('.')[:3])
+                    if prefix not in network_prefixes:
+                        network_prefixes.append(prefix)
+    except Exception as e:
+        log(f"Error getting network prefixes: {e}", "ERROR")
+    
+    # Ensure priority prefixes are tried first if not already in the list
+    for prefix in priority_prefixes:
+        if prefix not in network_prefixes:
+            network_prefixes.insert(0, prefix)
+    
+    return network_prefixes
 
 def discover_nodemcu():
     """Discover NodeMCU using network scan."""
     global nodemcu_ip, last_discovery_time
+    
+    # If already manually specified, skip discovery
+    if args.ip:
+        try:
+            response = requests.get(f"http://{nodemcu_ip}/", timeout=1)
+            if response.status_code == 200:
+                return True
+            else:
+                log(f"Manually specified IP {nodemcu_ip} is not responding correctly", "ERROR")
+        except Exception as e:
+            log(f"Error connecting to manually specified IP {nodemcu_ip}: {e}", "ERROR")
+            return False
     
     # If we have a recent discovery and the IP is still responding, use it
     if nodemcu_ip and time.time() - last_discovery_time < DISCOVERY_TIMEOUT:
@@ -95,38 +154,106 @@ def discover_nodemcu():
     
     log("Searching for NodeMCU on the network...")
     
-    # Get the network prefix
-    net_prefix = get_network_prefix()
-    log(f"Scanning network: {net_prefix}.0/24")
+    # Get all active network prefixes
+    network_prefixes = get_active_network_prefixes()
     
     # Create a queue for results
     result_queue = Queue()
-    threads = []
+    all_threads = []
     
-    # Scan all IPs in the subnet
-    for i in range(1, 255):
-        ip = f"{net_prefix}.{i}"
-        thread = Thread(target=check_port_80, args=(ip, result_queue))
-        thread.daemon = True
-        threads.append(thread)
-        thread.start()
+    # Scan all networks
+    current_subnet = None
+    for prefix in network_prefixes:
+        log(f"Scanning network: {prefix}.0/24")
+        current_subnet = prefix
+        threads = []
+        
+        # Scan all IPs in this subnet
+        for i in range(1, 255):
+            ip = f"{prefix}.{i}"
+            thread = Thread(target=check_port_80, args=(ip, result_queue))
+            thread.daemon = True
+            threads.append(thread)
+            all_threads.append(thread)
+            thread.start()
+            
+            # Limit to 50 concurrent threads to avoid overwhelming the system
+            if len(threads) >= 50:
+                for t in threads:
+                    t.join(timeout=0.2)
+                threads = []
+        
+        # Wait for remaining threads in this subnet
+        for thread in threads:
+            thread.join(timeout=0.2)
+            
+        # Check if we found the NodeMCU
+        try:
+            nodemcu_ip = result_queue.get_nowait()
+            last_discovery_time = time.time()
+            log(f"Found NodeMCU at {nodemcu_ip}", "SUCCESS")
+            
+            # Save the successful IP and subnet for future reference
+            os.makedirs(LIBRARY_PATH, exist_ok=True)
+            with open(os.path.join(LIBRARY_PATH, "nodemcu_ip.txt"), "w") as f:
+                f.write(nodemcu_ip)
+            
+            # Save the successful subnet
+            with open(os.path.join(LIBRARY_PATH, "last_subnet.txt"), "w") as f:
+                f.write(current_subnet)
+            
+            return True
+        except:
+            # Continue to next subnet
+            pass
     
-    # Wait for all threads to complete
-    for thread in threads:
+    # Wait for any remaining threads
+    for thread in all_threads:
         thread.join(timeout=0.1)
-    
-    # Check if we found the NodeMCU
+        
+    # One final check of the result queue
     try:
         nodemcu_ip = result_queue.get_nowait()
         last_discovery_time = time.time()
         log(f"Found NodeMCU at {nodemcu_ip}", "SUCCESS")
+        
+        # Save IP to a file for future reference
+        os.makedirs(LIBRARY_PATH, exist_ok=True)
+        with open(os.path.join(LIBRARY_PATH, "nodemcu_ip.txt"), "w") as f:
+            f.write(nodemcu_ip)
+        
+        # Save the successful subnet
+        with open(os.path.join(LIBRARY_PATH, "last_subnet.txt"), "w") as f:
+            f.write(current_subnet)
+            
         return True
     except:
+        # Try to load last known IP from file
+        try:
+            ip_file = os.path.join(LIBRARY_PATH, "nodemcu_ip.txt")
+            if os.path.exists(ip_file):
+                with open(ip_file, "r") as f:
+                    saved_ip = f.read().strip()
+                if saved_ip:
+                    log(f"Trying last known IP: {saved_ip}", "WARNING")
+                    try:
+                        response = requests.get(f"http://{saved_ip}/", timeout=1)
+                        if response.status_code == 200 and "IT Infrastructure" in response.text:
+                            nodemcu_ip = saved_ip
+                            last_discovery_time = time.time()
+                            log(f"Successfully connected to last known IP: {nodemcu_ip}", "SUCCESS")
+                            return True
+                    except:
+                        pass
+        except:
+            pass
+            
         log("NodeMCU not found on the network", "ERROR")
         log("Please ensure:", "ERROR")
         log("  • NodeMCU is powered on", "ERROR")
         log("  • NodeMCU is connected to the same WiFi network", "ERROR")
         log("  • The WiFi credentials are correct", "ERROR")
+        log("You can specify the subnet with --subnet parameter (e.g., --subnet 192.168.137)", "INFO")
         return False
 
 def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
@@ -358,7 +485,7 @@ def get_temperatures_from_json():
         data = r.json()
         cpu_temp = None
         gpu_temp = None
-        
+
         # Dump raw JSON for debugging
         with open("ohm_data.json", "w") as f:
             json.dump(data, f, indent=2)
@@ -634,7 +761,7 @@ def get_gpu_usage():
             return usage
     except Exception:
         pass
-    
+            
     # If everything fails, return a default value
     log("Could not determine GPU usage, using default value", "WARNING")
     return 25  # Return a reasonable default value instead of 0

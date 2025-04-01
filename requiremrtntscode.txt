@@ -14,6 +14,8 @@ uv pip install -r requirements.txt
 
 cursor 
 
+python ssm3.py --subnet 192.168.137
+
 
 to frontend 
     -i like th ui
