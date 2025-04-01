@@ -4,9 +4,12 @@ import requests
 import zipfile
 import time
 import json
+import socket
+import zeroconf
+from zeroconf import ServiceInfo, Zeroconf
 
 # --- Module Check Only ---
-required_modules = ["requests", "wmi", "psutil"]
+required_modules = ["requests", "wmi", "psutil", "zeroconf"]
 
 missing_modules = []
 for module in required_modules:
@@ -30,7 +33,7 @@ else:  # Linux/Mac
     LIBRARY_PATH = os.path.join(os.path.expanduser('~'), '.local', 'share', 'ITInfrastructureMonitor')
 
 OHM_ZIP_URL = "https://openhardwaremonitor.org/files/openhardwaremonitor-v0.9.6.zip"
-NODEMCU_IP = "192.168.0.190"  # Static IP of NodeMCU
+NODEMCU_SERVICE_NAME = "itinfrastructuremonitor._http._tcp.local."
 
 # Add tracking sets for discovered hardware and detected sensors
 discovered_hardware = set()
@@ -39,7 +42,126 @@ detected_sensors = set()
 # Verbosity level: 0 = minimal, 1 = normal, 2 = verbose
 verbosity = 1
 
-# Configure logging format
+# NodeMCU IP address (will be discovered)
+nodemcu_ip = None
+
+class NodeMCUListener:
+    def __init__(self):
+        self.found = False
+        self.ip = None
+
+    def remove_service(self, zeroconf, type_, name):
+        pass
+
+    def add_service(self, zeroconf, type_, name):
+        if name == NODEMCU_SERVICE_NAME:
+            info = zeroconf.get_service_info(type_, name)
+            if info:
+                self.ip = socket.inet_ntoa(info.addresses[0])
+                self.found = True
+                log(f"Found NodeMCU at {self.ip}", "SUCCESS")
+
+def discover_nodemcu():
+    """Discover NodeMCU using mDNS."""
+    global nodemcu_ip
+    
+    log("Searching for NodeMCU on the network...")
+    zeroconf = Zeroconf()
+    listener = NodeMCUListener()
+    
+    try:
+        browser = zeroconf.ServiceBrowser(zeroconf, "_http._tcp.local.", listener)
+        # Wait for up to 10 seconds to find the NodeMCU
+        for _ in range(20):  # 20 * 0.5 seconds = 10 seconds
+            if listener.found:
+                nodemcu_ip = listener.ip
+                zeroconf.close()
+                return True
+            time.sleep(0.5)
+        
+        log("NodeMCU not found on the network", "ERROR")
+        log("Please ensure:", "ERROR")
+        log("  • NodeMCU is powered on", "ERROR")
+        log("  • NodeMCU is connected to the same WiFi network", "ERROR")
+        log("  • The WiFi credentials are correct", "ERROR")
+        return False
+        
+    except Exception as e:
+        log(f"Error during NodeMCU discovery: {e}", "ERROR")
+        return False
+    finally:
+        zeroconf.close()
+
+def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
+    """Send only the required filtered metrics to the NodeMCU."""
+    global nodemcu_ip
+    
+    try:
+        # If we don't have the NodeMCU IP, try to discover it
+        if not nodemcu_ip:
+            if not discover_nodemcu():
+                return
+        
+        # Get additional system metrics
+        metrics = get_system_metrics()
+        
+        # Add temperature data (ensuring we have numeric values)
+        if cpu_temp == "N/A":
+            metrics['cpu_temp'] = "N/A"
+        else:
+            metrics['cpu_temp'] = round(float(cpu_temp) if cpu_temp is not None else 0, 1)
+            
+        if gpu_temp == "N/A":
+            metrics['gpu_temp'] = "N/A"
+        else:
+            metrics['gpu_temp'] = round(float(gpu_temp) if gpu_temp is not None else 0, 1)
+        
+        log(f"  • cpu_temp: {metrics['cpu_temp']}°C", "METRIC")
+        log(f"  • gpu_temp: {metrics['gpu_temp']}°C", "METRIC")
+        
+        # Create a simplified JSON payload with only the required metrics
+        filtered_metrics = {
+            'cpu_temp': metrics['cpu_temp'],
+            'cpu_usage': metrics['cpu_usage'],
+            'ram_usage': metrics['ram_usage'],
+            'gpu_temp': metrics['gpu_temp'],
+            'gpu_usage': metrics['gpu_usage']
+        }
+        
+        json_payload = json.dumps(filtered_metrics)
+        
+        # Send data to NodeMCU with increased timeout
+        url = f"http://{nodemcu_ip}/update"  # Using the correct endpoint (/update)
+        headers = {'Content-Type': 'application/json'}
+        
+        log(f"Sending data to NodeMCU: {json_payload}")
+        
+        try:
+            # Set a reasonable timeout to prevent hanging
+            r = requests.post(url, data=json_payload, headers=headers, timeout=5)
+            
+            if r.status_code == 200:
+                log("Filtered metrics sent to NodeMCU successfully!", "SUCCESS")
+            else:
+                log(f"Unexpected response from NodeMCU: HTTP {r.status_code}", "WARNING")
+                log(f"Response: {r.text}", "WARNING")
+                
+        except requests.exceptions.Timeout:
+            log(f"Connection to NodeMCU timed out. Retrying discovery...", "ERROR")
+            nodemcu_ip = None  # Reset IP to trigger rediscovery
+            discover_nodemcu()
+            
+        except requests.exceptions.ConnectionError:
+            log(f"Failed to connect to NodeMCU. Retrying discovery...", "ERROR")
+            nodemcu_ip = None  # Reset IP to trigger rediscovery
+            discover_nodemcu()
+            
+        except Exception as e:
+            log(f"Failed to send metrics to NodeMCU: {e}", "ERROR")
+            
+    except Exception as e:
+        log(f"Error preparing metrics for NodeMCU: {e}", "ERROR")
+
 def log(message, type="INFO"):
     prefix = {
         "INFO": "ℹ️",
@@ -808,72 +930,6 @@ def get_metrics_via_command_line():
     
     log(f"Got metrics via command line: CPU {metrics['cpu_usage']}%, RAM {metrics['ram_usage']}%", "DEBUG")
     return metrics
-
-
-def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
-    """Send only the required filtered metrics to the NodeMCU."""
-    try:
-        # Get additional system metrics
-        metrics = get_system_metrics()
-        
-        # Add temperature data (ensuring we have numeric values)
-        if cpu_temp == "N/A":
-            metrics['cpu_temp'] = "N/A"
-        else:
-            metrics['cpu_temp'] = round(float(cpu_temp) if cpu_temp is not None else 0, 1)
-            
-        if gpu_temp == "N/A":
-            metrics['gpu_temp'] = "N/A"
-        else:
-            metrics['gpu_temp'] = round(float(gpu_temp) if gpu_temp is not None else 0, 1)
-        
-        log(f"  • cpu_temp: {metrics['cpu_temp']}°C", "METRIC")
-        log(f"  • gpu_temp: {metrics['gpu_temp']}°C", "METRIC")
-        
-        # Create a simplified JSON payload with only the required metrics
-        filtered_metrics = {
-            'cpu_temp': metrics['cpu_temp'],
-            'cpu_usage': metrics['cpu_usage'],
-            'ram_usage': metrics['ram_usage'],
-            'gpu_temp': metrics['gpu_temp'],
-            'gpu_usage': metrics['gpu_usage']
-        }
-        
-        json_payload = json.dumps(filtered_metrics)
-        
-        # Send data to NodeMCU with increased timeout
-        url = f"http://{NODEMCU_IP}/update"  # Using the correct endpoint (/update)
-        headers = {'Content-Type': 'application/json'}
-        
-        log(f"Sending data to NodeMCU: {json_payload}")
-        
-        try:
-            # Set a reasonable timeout to prevent hanging
-            r = requests.post(url, data=json_payload, headers=headers, timeout=5)
-            
-            if r.status_code == 200:
-                log("Filtered metrics sent to NodeMCU successfully!", "SUCCESS")
-            else:
-                log(f"Unexpected response from NodeMCU: HTTP {r.status_code}", "WARNING")
-                log(f"Response: {r.text}", "WARNING")
-                
-        except requests.exceptions.Timeout:
-            log(f"Connection to NodeMCU timed out. Ensure it's powered on and connected to WiFi at {NODEMCU_IP}.", "ERROR")
-            log("Check that the static IP configuration is correct.", "ERROR")
-            
-        except requests.exceptions.ConnectionError:
-            log(f"Failed to connect to NodeMCU at {NODEMCU_IP}.", "ERROR")
-            log("Possible causes:", "ERROR")
-            log("  • NodeMCU is not powered on", "ERROR")
-            log("  • NodeMCU is not connected to WiFi", "ERROR")
-            log("  • IP address is incorrect (current: {NODEMCU_IP})", "ERROR")
-            log("  • NodeMCU and PC are on different networks", "ERROR")
-            
-        except Exception as e:
-            log(f"Failed to send metrics to NodeMCU: {e}", "ERROR")
-            
-    except Exception as e:
-        log(f"Error preparing metrics for NodeMCU: {e}", "ERROR")
 
 
 def print_banner():
