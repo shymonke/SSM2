@@ -828,7 +828,7 @@ def get_cpu_usage_from_ohm():
                                 value = float(value_str.split()[0])  # Remove " %" from the end
                                 cpu_load = value
                                 log_once(f"Found CPU Load: {value}% from {node['Text']}", 
-                                       "DEBUG", f"cpu_load_{node['Text']}")
+                                        "DEBUG", f"cpu_load_{node['Text']}")
                                 return
                             except Exception as e:
                                 log(f"Error parsing CPU load value: {e}", "DEBUG")
@@ -839,10 +839,10 @@ def get_cpu_usage_from_ohm():
                                 value = float(value_str.split()[0])
                                 cpu_load = value
                                 log_once(f"Found fallback CPU Load: {value}% from {node['Text']}", 
-                                       "DEBUG", f"cpu_load_fallback_{node['Text']}")
+                                        "DEBUG", f"cpu_load_fallback_{node['Text']}")
                             except Exception:
                                 pass
-            
+
             # Try the fallback method
             for hw in data.get('Children', []):
                 find_any_cpu_load(hw)
@@ -1095,11 +1095,11 @@ def get_metrics_via_command_line():
 def print_banner():
     """Print a nice banner at startup."""
     banner = """
-    ╔════════════════════════════════════════════════╗
-    ║                                                ║
-    ║    🖥️  IT INFRASTRUCTURE MONITORING v2.0  🖥️  ║
-    ║                                                ║
-    ╚════════════════════════════════════════════════╝
+    ╔════════════════════════════════════════════╗
+    ║                                            ║
+    ║  🖥️ IT INFRASTRUCTURE MONITORING v2.0 🖥️   ║
+    ║                                            ║
+    ╚════════════════════════════════════════════╝
     """
     print(banner)
 
