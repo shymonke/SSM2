@@ -23,8 +23,8 @@
                       "Text": "CPU VCore",
                       "Children": [],
                       "Min": "1.032 V",
-                      "Value": "1.136 V",
-                      "Max": "1.416 V",
+                      "Value": "1.320 V",
+                      "Max": "1.432 V",
                       "ImageURL": "images/transparent.png"
                     },
                     {
@@ -41,7 +41,7 @@
                       "Text": "AVCC",
                       "Children": [],
                       "Min": "3.328 V",
-                      "Value": "3.328 V",
+                      "Value": "3.344 V",
                       "Max": "3.344 V",
                       "ImageURL": "images/transparent.png"
                     },
@@ -77,8 +77,8 @@
                       "Text": "Voltage #7",
                       "Children": [],
                       "Min": "0.624 V",
-                      "Value": "0.640 V",
-                      "Max": "0.640 V",
+                      "Value": "0.632 V",
+                      "Max": "0.648 V",
                       "ImageURL": "images/transparent.png"
                     },
                     {
@@ -104,8 +104,8 @@
                       "Text": "Voltage #12",
                       "Children": [],
                       "Min": "0.544 V",
-                      "Value": "0.568 V",
-                      "Max": "0.568 V",
+                      "Value": "0.576 V",
+                      "Max": "0.576 V",
                       "ImageURL": "images/transparent.png"
                     },
                     {
@@ -113,7 +113,7 @@
                       "Text": "Voltage #13",
                       "Children": [],
                       "Min": "1.104 V",
-                      "Value": "1.104 V",
+                      "Value": "1.112 V",
                       "Max": "1.112 V",
                       "ImageURL": "images/transparent.png"
                     },
@@ -131,7 +131,7 @@
                       "Text": "Voltage #15",
                       "Children": [],
                       "Min": "1.520 V",
-                      "Value": "1.528 V",
+                      "Value": "1.520 V",
                       "Max": "1.528 V",
                       "ImageURL": "images/transparent.png"
                     }
@@ -149,8 +149,8 @@
                       "id": 19,
                       "Text": "Temperature #1",
                       "Children": [],
-                      "Min": "43.0 \u00b0C",
-                      "Value": "43.0 \u00b0C",
+                      "Min": "42.0 \u00b0C",
+                      "Value": "45.0 \u00b0C",
                       "Max": "48.0 \u00b0C",
                       "ImageURL": "images/transparent.png"
                     },
@@ -159,7 +159,7 @@
                       "Text": "Temperature #2",
                       "Children": [],
                       "Min": "41.0 \u00b0C",
-                      "Value": "42.0 \u00b0C",
+                      "Value": "41.0 \u00b0C",
                       "Max": "42.0 \u00b0C",
                       "ImageURL": "images/transparent.png"
                     },
@@ -168,7 +168,7 @@
                       "Text": "Temperature #3",
                       "Children": [],
                       "Min": "46.5 \u00b0C",
-                      "Value": "46.5 \u00b0C",
+                      "Value": "47.5 \u00b0C",
                       "Max": "48.0 \u00b0C",
                       "ImageURL": "images/transparent.png"
                     },
@@ -204,8 +204,8 @@
                       "id": 25,
                       "Text": "Fan #1",
                       "Children": [],
-                      "Min": "1324 RPM",
-                      "Value": "1360 RPM",
+                      "Min": "1309 RPM",
+                      "Value": "1438 RPM",
                       "Max": "1893 RPM",
                       "ImageURL": "images/transparent.png"
                     },
@@ -213,7 +213,7 @@
                       "id": 26,
                       "Text": "Fan #2",
                       "Children": [],
-                      "Min": "2381 RPM",
+                      "Min": "2377 RPM",
                       "Value": "2394 RPM",
                       "Max": "2406 RPM",
                       "ImageURL": "images/transparent.png"
@@ -222,8 +222,8 @@
                       "id": 27,
                       "Text": "Fan #6",
                       "Children": [],
-                      "Min": "980 RPM",
-                      "Value": "1031 RPM",
+                      "Min": "964 RPM",
+                      "Value": "1301 RPM",
                       "Max": "1564 RPM",
                       "ImageURL": "images/transparent.png"
                     }
@@ -241,8 +241,8 @@
                       "id": 29,
                       "Text": "Fan Control #1",
                       "Children": [],
-                      "Min": "53.3 %",
-                      "Value": "54.5 %",
+                      "Min": "52.9 %",
+                      "Value": "60.8 %",
                       "Max": "100.0 %",
                       "ImageURL": "images/transparent.png"
                     },
@@ -250,8 +250,8 @@
                       "id": 30,
                       "Text": "Fan Control #2",
                       "Children": [],
-                      "Min": "49.8 %",
-                      "Value": "52.9 %",
+                      "Min": "48.6 %",
+                      "Value": "82.7 %",
                       "Max": "100.0 %",
                       "ImageURL": "images/transparent.png"
                     },
@@ -286,8 +286,8 @@
                       "id": 34,
                       "Text": "Fan Control #6",
                       "Children": [],
-                      "Min": "58.8 %",
-                      "Value": "61.6 %",
+                      "Min": "58.0 %",
+                      "Value": "81.2 %",
                       "Max": "95.7 %",
                       "ImageURL": "images/transparent.png"
                     },
@@ -358,7 +358,7 @@
                   "Text": "CPU Core #3",
                   "Children": [],
                   "Min": "2940.1 MHz",
-                  "Value": "3840.1 MHz",
+                  "Value": "4800.1 MHz",
                   "Max": "4900.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -367,8 +367,8 @@
                   "Text": "CPU Core #4",
                   "Children": [],
                   "Min": "2940.1 MHz",
-                  "Value": "3840.1 MHz",
-                  "Max": "4875.1 MHz",
+                  "Value": "4800.1 MHz",
+                  "Max": "4900.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
                 {
@@ -377,7 +377,7 @@
                   "Children": [],
                   "Min": "2940.1 MHz",
                   "Value": "3840.1 MHz",
-                  "Max": "4825.1 MHz",
+                  "Max": "4900.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
                 {
@@ -393,8 +393,8 @@
                   "id": 45,
                   "Text": "CPU Core #7",
                   "Children": [],
-                  "Min": "3675.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Min": "2940.1 MHz",
+                  "Value": "4800.1 MHz",
                   "Max": "4825.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -402,8 +402,8 @@
                   "id": 46,
                   "Text": "CPU Core #8",
                   "Children": [],
-                  "Min": "3675.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Min": "2940.1 MHz",
+                  "Value": "3840.1 MHz",
                   "Max": "4800.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -412,7 +412,7 @@
                   "Text": "CPU Core #9",
                   "Children": [],
                   "Min": "3675.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Value": "3840.1 MHz",
                   "Max": "4800.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -420,8 +420,8 @@
                   "id": 48,
                   "Text": "CPU Core #10",
                   "Children": [],
-                  "Min": "3675.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Min": "2940.1 MHz",
+                  "Value": "3840.1 MHz",
                   "Max": "4800.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -429,8 +429,8 @@
                   "id": 49,
                   "Text": "CPU Core #11",
                   "Children": [],
-                  "Min": "3675.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Min": "2940.1 MHz",
+                  "Value": "3840.1 MHz",
                   "Max": "4800.1 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -439,7 +439,7 @@
                   "Text": "CPU Core #12",
                   "Children": [],
                   "Min": "2940.1 MHz",
-                  "Value": "3675.1 MHz",
+                  "Value": "3840.1 MHz",
                   "Max": "4800.1 MHz",
                   "ImageURL": "images/transparent.png"
                 }
@@ -457,8 +457,8 @@
                   "id": 52,
                   "Text": "CPU Package",
                   "Children": [],
-                  "Min": "49.4 \u00b0C",
-                  "Value": "52.1 \u00b0C",
+                  "Min": "49.0 \u00b0C",
+                  "Value": "66.5 \u00b0C",
                   "Max": "77.8 \u00b0C",
                   "ImageURL": "images/transparent.png"
                 },
@@ -467,7 +467,7 @@
                   "Text": "CPU CCD Max",
                   "Children": [],
                   "Min": "43.3 \u00b0C",
-                  "Value": "44.5 \u00b0C",
+                  "Value": "51.3 \u00b0C",
                   "Max": "83.0 \u00b0C",
                   "ImageURL": "images/transparent.png"
                 },
@@ -476,7 +476,7 @@
                   "Text": "CPU CCD Average",
                   "Children": [],
                   "Min": "42.6 \u00b0C",
-                  "Value": "43.6 \u00b0C",
+                  "Value": "47.8 \u00b0C",
                   "Max": "72.3 \u00b0C",
                   "ImageURL": "images/transparent.png"
                 },
@@ -485,7 +485,7 @@
                   "Text": "CPU CCD #1",
                   "Children": [],
                   "Min": "43.3 \u00b0C",
-                  "Value": "44.5 \u00b0C",
+                  "Value": "51.3 \u00b0C",
                   "Max": "83.0 \u00b0C",
                   "ImageURL": "images/transparent.png"
                 },
@@ -493,8 +493,8 @@
                   "id": 56,
                   "Text": "CPU CCD #2",
                   "Children": [],
-                  "Min": "41.8 \u00b0C",
-                  "Value": "42.8 \u00b0C",
+                  "Min": "41.5 \u00b0C",
+                  "Value": "44.3 \u00b0C",
                   "Max": "68.3 \u00b0C",
                   "ImageURL": "images/transparent.png"
                 }
@@ -512,8 +512,8 @@
                   "id": 58,
                   "Text": "CPU Total",
                   "Children": [],
-                  "Min": "0.4 %",
-                  "Value": "2.5 %",
+                  "Min": "0.3 %",
+                  "Value": "6.4 %",
                   "Max": "35.2 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -522,7 +522,7 @@
                   "Text": "CPU Core #1",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "14.8 %",
+                  "Value": "19.5 %",
                   "Max": "54.7 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -530,8 +530,8 @@
                   "id": 60,
                   "Text": "CPU Core #2",
                   "Children": [],
-                  "Min": "1.6 %",
-                  "Value": "5.5 %",
+                  "Min": "0.8 %",
+                  "Value": "21.9 %",
                   "Max": "52.3 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -540,7 +540,7 @@
                   "Text": "CPU Core #3",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.8 %",
+                  "Value": "2.4 %",
                   "Max": "37.5 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -549,7 +549,7 @@
                   "Text": "CPU Core #4",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "2.3 %",
+                  "Value": "4.7 %",
                   "Max": "43.0 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -558,7 +558,7 @@
                   "Text": "CPU Core #5",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.8 %",
+                  "Value": "3.9 %",
                   "Max": "45.3 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -567,7 +567,7 @@
                   "Text": "CPU Core #6",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.0 %",
+                  "Value": "18.8 %",
                   "Max": "49.2 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -576,7 +576,7 @@
                   "Text": "CPU Core #7",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.8 %",
+                  "Value": "1.6 %",
                   "Max": "32.8 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -585,7 +585,7 @@
                   "Text": "CPU Core #8",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "1.5 %",
+                  "Value": "0.8 %",
                   "Max": "26.6 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -594,7 +594,7 @@
                   "Text": "CPU Core #9",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.8 %",
+                  "Value": "3.1 %",
                   "Max": "32.8 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -612,7 +612,7 @@
                   "Text": "CPU Core #11",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "0.8 %",
+                  "Value": "0.0 %",
                   "Max": "18.8 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -621,8 +621,8 @@
                   "Text": "CPU Core #12",
                   "Children": [],
                   "Min": "0.0 %",
-                  "Value": "2.3 %",
-                  "Max": "14.8 %",
+                  "Value": "0.0 %",
+                  "Max": "16.3 %",
                   "ImageURL": "images/transparent.png"
                 }
               ],
@@ -639,8 +639,8 @@
                   "id": 72,
                   "Text": "CPU Package",
                   "Children": [],
-                  "Min": "47.3 W",
-                  "Value": "50.0 W",
+                  "Min": "47.1 W",
+                  "Value": "85.5 W",
                   "Max": "144.7 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -649,7 +649,7 @@
                   "Text": "CPU Cores",
                   "Children": [],
                   "Min": "4.4 W",
-                  "Value": "5.5 W",
+                  "Value": "31.6 W",
                   "Max": "91.9 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -658,7 +658,7 @@
                   "Text": "CPU Core #1",
                   "Children": [],
                   "Min": "1.2 W",
-                  "Value": "1.6 W",
+                  "Value": "7.1 W",
                   "Max": "11.7 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -667,7 +667,7 @@
                   "Text": "CPU Core #2",
                   "Children": [],
                   "Min": "1.4 W",
-                  "Value": "1.6 W",
+                  "Value": "6.5 W",
                   "Max": "12.7 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -676,7 +676,7 @@
                   "Text": "CPU Core #3",
                   "Children": [],
                   "Min": "0.1 W",
-                  "Value": "0.1 W",
+                  "Value": "2.5 W",
                   "Max": "9.2 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -684,8 +684,8 @@
                   "id": 77,
                   "Text": "CPU Core #4",
                   "Children": [],
-                  "Min": "0.3 W",
-                  "Value": "0.6 W",
+                  "Min": "0.2 W",
+                  "Value": "4.0 W",
                   "Max": "10.2 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -694,7 +694,7 @@
                   "Text": "CPU Core #5",
                   "Children": [],
                   "Min": "0.1 W",
-                  "Value": "0.1 W",
+                  "Value": "3.3 W",
                   "Max": "9.5 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -703,7 +703,7 @@
                   "Text": "CPU Core #6",
                   "Children": [],
                   "Min": "1.0 W",
-                  "Value": "1.2 W",
+                  "Value": "5.7 W",
                   "Max": "10.6 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -712,7 +712,7 @@
                   "Text": "CPU Core #7",
                   "Children": [],
                   "Min": "0.0 W",
-                  "Value": "0.0 W",
+                  "Value": "0.6 W",
                   "Max": "6.2 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -721,7 +721,7 @@
                   "Text": "CPU Core #8",
                   "Children": [],
                   "Min": "0.0 W",
-                  "Value": "0.0 W",
+                  "Value": "0.4 W",
                   "Max": "5.1 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -730,7 +730,7 @@
                   "Text": "CPU Core #9",
                   "Children": [],
                   "Min": "0.0 W",
-                  "Value": "0.1 W",
+                  "Value": "1.2 W",
                   "Max": "6.7 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -739,7 +739,7 @@
                   "Text": "CPU Core #10",
                   "Children": [],
                   "Min": "0.0 W",
-                  "Value": "0.0 W",
+                  "Value": "0.2 W",
                   "Max": "4.7 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -748,7 +748,7 @@
                   "Text": "CPU Core #11",
                   "Children": [],
                   "Min": "0.0 W",
-                  "Value": "0.2 W",
+                  "Value": "0.1 W",
                   "Max": "3.8 W",
                   "ImageURL": "images/transparent.png"
                 },
@@ -786,8 +786,8 @@
                   "Text": "Memory",
                   "Children": [],
                   "Min": "29.3 %",
-                  "Value": "34.4 %",
-                  "Max": "35.2 %",
+                  "Value": "35.5 %",
+                  "Max": "36.8 %",
                   "ImageURL": "images/transparent.png"
                 }
               ],
@@ -805,16 +805,16 @@
                   "Text": "Used Memory",
                   "Children": [],
                   "Min": "9.4 GB",
-                  "Value": "11.0 GB",
-                  "Max": "11.2 GB",
+                  "Value": "11.3 GB",
+                  "Max": "11.7 GB",
                   "ImageURL": "images/transparent.png"
                 },
                 {
                   "id": 91,
                   "Text": "Available Memory",
                   "Children": [],
-                  "Min": "20.7 GB",
-                  "Value": "20.9 GB",
+                  "Min": "20.2 GB",
+                  "Value": "20.6 GB",
                   "Max": "22.6 GB",
                   "ImageURL": "images/transparent.png"
                 }
@@ -843,8 +843,8 @@
                   "Text": "GPU Core",
                   "Children": [],
                   "Min": "210.0 MHz",
-                  "Value": "210.0 MHz",
-                  "Max": "1935.0 MHz",
+                  "Value": "600.0 MHz",
+                  "Max": "1950.0 MHz",
                   "ImageURL": "images/transparent.png"
                 },
                 {
@@ -852,7 +852,7 @@
                   "Text": "GPU Memory",
                   "Children": [],
                   "Min": "405.0 MHz",
-                  "Value": "405.0 MHz",
+                  "Value": "810.0 MHz",
                   "Max": "9502.0 MHz",
                   "ImageURL": "images/transparent.png"
                 },
@@ -899,7 +899,7 @@
                   "Text": "GPU Core",
                   "Children": [],
                   "Min": "1.0 %",
-                  "Value": "11.0 %",
+                  "Value": "38.0 %",
                   "Max": "98.0 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -908,7 +908,7 @@
                   "Text": "GPU Frame Buffer",
                   "Children": [],
                   "Min": "1.0 %",
-                  "Value": "13.0 %",
+                  "Value": "11.0 %",
                   "Max": "37.0 %",
                   "ImageURL": "images/transparent.png"
                 },
@@ -935,7 +935,7 @@
                   "Text": "GPU Memory",
                   "Children": [],
                   "Min": "12.8 %",
-                  "Value": "15.3 %",
+                  "Value": "15.7 %",
                   "Max": "15.9 %",
                   "ImageURL": "images/transparent.png"
                 }
@@ -954,7 +954,7 @@
                   "Text": "GPU",
                   "Children": [],
                   "Min": "785 RPM",
-                  "Value": "844 RPM",
+                  "Value": "839 RPM",
                   "Max": "1104 RPM",
                   "ImageURL": "images/transparent.png"
                 }
@@ -991,8 +991,8 @@
                   "id": 110,
                   "Text": "GPU Power",
                   "Children": [],
-                  "Min": "32.7 W",
-                  "Value": "33.1 W",
+                  "Min": "32.1 W",
+                  "Value": "37.1 W",
                   "Max": "121.3 W",
                   "ImageURL": "images/transparent.png"
                 }
@@ -1011,7 +1011,7 @@
                   "Text": "GPU Memory Free",
                   "Children": [],
                   "Min": "8610.3 MB",
-                  "Value": "8678.0 MB",
+                  "Value": "8630.4 MB",
                   "Max": "8928.4 MB",
                   "ImageURL": "images/transparent.png"
                 },
@@ -1020,7 +1020,7 @@
                   "Text": "GPU Memory Used",
                   "Children": [],
                   "Min": "1311.6 MB",
-                  "Value": "1562.0 MB",
+                  "Value": "1609.6 MB",
                   "Max": "1629.7 MB",
                   "ImageURL": "images/transparent.png"
                 },
@@ -1048,7 +1048,7 @@
                   "Text": "GPU PCIE Rx",
                   "Children": [],
                   "Min": "200.0 KB/s",
-                  "Value": "350.0 KB/s",
+                  "Value": "9.9 MB/s",
                   "Max": "753.7 MB/s",
                   "ImageURL": "images/transparent.png"
                 },
@@ -1057,8 +1057,8 @@
                   "Text": "GPU PCIE Tx",
                   "Children": [],
                   "Min": "300.0 KB/s",
-                  "Value": "3.2 MB/s",
-                  "Max": "106.3 MB/s",
+                  "Value": "9.2 MB/s",
+                  "Max": "779.1 MB/s",
                   "ImageURL": "images/transparent.png"
                 }
               ],
