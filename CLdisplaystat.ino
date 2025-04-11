@@ -18,8 +18,8 @@ const char* password = "7660011887";
 const char* deviceName = "itinfrastructuremonitor";
 
 // Telegram Bot settings
-#define BOT_TOKEN "YOUR_TELEGRAM_BOT_TOKEN"  // Replace with your bot token
-#define CHAT_ID "YOUR_CHAT_ID"               // Replace with your chat ID
+#define BOT_TOKEN "7805830591:AAG3iJkoJ8BryIi32CmWN7oK7xWo-0-O-OY"  // Replace with your bot token
+#define CHAT_ID "1158723052"               // Replace with your chat ID
 
 // Web server to receive metrics and host web interface
 ESP8266WebServer server(80);
