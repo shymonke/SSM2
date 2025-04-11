@@ -8,20 +8,18 @@
 #include <EEPROM.h>
 #include <UniversalTelegramBot.h>
 #include <WiFiClientSecure.h>
+#include <ESP8266mDNS.h>
 
 // WiFi credentials
 const char* ssid = "PEACE 2GHz";
 const char* password = "7660011887";
 
+// Device name for mDNS
+const char* deviceName = "itinfrastructuremonitor";
+
 // Telegram Bot settings
 #define BOT_TOKEN "YOUR_TELEGRAM_BOT_TOKEN"  // Replace with your bot token
 #define CHAT_ID "YOUR_CHAT_ID"               // Replace with your chat ID
-
-// Set static IP configuration
-IPAddress staticIP(192, 168, 0, 190);  // Static IP for NodeMCU
-IPAddress gateway(192, 168, 0, 1);     // Gateway IP (router)
-IPAddress subnet(255, 255, 255, 0);    // Subnet mask
-IPAddress dns(8, 8, 8, 8);             // DNS (Google)
 
 // Web server to receive metrics and host web interface
 ESP8266WebServer server(80);
@@ -105,7 +103,7 @@ void setup() {
   // Show startup screen
   showStartupScreen();
   
-  // Connect to WiFi with static IP
+  // Connect to WiFi
   connectToWiFi();
   
   // Configure Telegram client to skip certificate validation
@@ -539,22 +537,39 @@ void drawBackground() {
 
 void showStartupScreen() {
   tft.fillScreen(ST77XX_BLACK);
-  tft.setTextSize(2);
+  tft.setTextSize(1);  // Using smaller text size to fit all three lines
   tft.setTextColor(ST77XX_WHITE);
   
-  // Display centered title
+  // Calculate positions for all three lines
   int16_t x1, y1;
   uint16_t w, h;
-  const char* title = "IT Infrastructure";
-  const char* title2 = "Monitoring";
   
-  tft.getTextBounds(title, 0, 0, &x1, &y1, &w, &h);
-  tft.setCursor((tft.width() - w) / 2, tft.height()/2 - h);
-  tft.println(title);
+  // First line: "IT"
+  const char* line1 = "IT";
+  tft.getTextBounds(line1, 0, 0, &x1, &y1, &w, &h);
+  int16_t x = (tft.width() - w) / 2;
+  int16_t y = (tft.height() / 2) - (h * 2); // Position above center
   
-  tft.getTextBounds(title2, 0, 0, &x1, &y1, &w, &h);
-  tft.setCursor((tft.width() - w) / 2, tft.height()/2 + h);
-  tft.println(title2);
+  tft.setCursor(x, y);
+  tft.println(line1);
+  
+  // Second line: "Infrastructure"
+  const char* line2 = "Infrastructure";
+  tft.getTextBounds(line2, 0, 0, &x1, &y1, &w, &h);
+  x = (tft.width() - w) / 2;
+  y = (tft.height() / 2) - h; // Position at center
+  
+  tft.setCursor(x, y);
+  tft.println(line2);
+  
+  // Third line: "Monitoring System"
+  const char* line3 = "Monitoring System";
+  tft.getTextBounds(line3, 0, 0, &x1, &y1, &w, &h);
+  x = (tft.width() - w) / 2;
+  y = (tft.height() / 2) + h; // Position below center
+  
+  tft.setCursor(x, y);
+  tft.println(line3);
   
   delay(2000);
 }
@@ -565,15 +580,6 @@ void connectToWiFi() {
   tft.setTextColor(ST77XX_WHITE);
   tft.setCursor(5, 20);
   tft.print("Connecting to WiFi");
-  
-  // Configure static IP
-  if (!WiFi.config(staticIP, gateway, subnet, dns)) {
-    Serial.println("Failed to configure static IP");
-    tft.setCursor(5, 40);
-    tft.setTextColor(ST77XX_RED);
-    tft.println("Static IP config failed!");
-    delay(2000);
-  }
   
   WiFi.begin(ssid, password);
   int dots = 0;
@@ -586,6 +592,17 @@ void connectToWiFi() {
     if (dots == 0) {
       tft.fillRect(5, 40, 120, 10, ST77XX_BLACK);
     }
+  }
+  
+  // Initialize mDNS
+  if (MDNS.begin(deviceName)) {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("mDNS responder started");
+    Serial.print("You can now connect to http://");
+    Serial.print(deviceName);
+    Serial.println(".local");
+  } else {
+    Serial.println("Error setting up mDNS responder!");
   }
   
   tft.fillScreen(ST77XX_BLACK);
