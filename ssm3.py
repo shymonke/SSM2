@@ -47,6 +47,18 @@ nodemcu_ip = None
 last_discovery_time = 0
 DISCOVERY_TIMEOUT = 300  # 5 minutes between full network scans
 
+def log(message, type="INFO"):
+    prefix = {
+        "INFO": "ℹ️",
+        "SUCCESS": "✅",
+        "WARNING": "⚠️",
+        "ERROR": "❌",
+        "DEBUG": "🔍",
+        "METRIC": "📊"
+    }.get(type, "ℹ️")
+    
+    print(f"{prefix} {message}")
+
 # Parse command line arguments
 def parse_args():
     parser = argparse.ArgumentParser(description='IT Infrastructure Monitoring System')
@@ -321,18 +333,6 @@ def send_filtered_metrics_to_nodemcu(cpu_temp, gpu_temp):
             
     except Exception as e:
         log(f"Error preparing metrics for NodeMCU: {e}", "ERROR")
-
-def log(message, type="INFO"):
-    prefix = {
-        "INFO": "ℹ️",
-        "SUCCESS": "✅",
-        "WARNING": "⚠️",
-        "ERROR": "❌",
-        "DEBUG": "🔍",
-        "METRIC": "📊"
-    }.get(type, "ℹ️")
-    
-    print(f"{prefix} {message}")
 
 def log_once(message, type="DEBUG", identifier=None):
     """Log a message only once for a given identifier."""
